@@ -17,6 +17,7 @@ trap cat_npm_debug_log ERR
 
 # Look in package.json's engines.node field for a semver range
 semver_range=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.node)
+npm_semver_range=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.npm)
 
 # Resolve node version using semver.io
 node_version=$(curl --silent --get --data-urlencode "range=${semver_range}" https://semver.io/node/resolve)
@@ -62,6 +63,10 @@ if test -d $build_dir/node_modules; then
 elif test -d $cache_dir/node_modules; then
   status "Restoring node_modules directory from cache"
   cp -r $cache_dir/node_modules $build_dir/
+fi
+
+if [ ! -z "$npm_semver_range" ] && [ "$npm_semver_range" != "null" ]; then
+  npm --global install npm@"$npm_semver_range"
 fi
 
 # Make npm output to STDOUT instead of its default STDERR
