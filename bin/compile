@@ -24,7 +24,7 @@ npm_semver_range=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.n
 node_version=$(curl --silent --get --data-urlencode "range=${semver_range}" https://semver.io/node/resolve)
 
 # Recommend using semver ranges in a safe manner
-if [ "$semver_range" == "null" ] || [ "$npm_semver_range" == "null" ]; then
+if [ "$semver_range" == "null" ]; then
   protip "Specify a node version in package.json"
   semver_range=""
 elif [ "$semver_range" == "*" ] || [ "$npm_semver_range" == "*" ]; then
