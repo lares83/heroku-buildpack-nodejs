@@ -20,16 +20,16 @@ trap cat_npm_debug_log ERR
 semver_range=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.node)
 npm_semver_range=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.npm)
 
-# Resolve node version using semver.io
+# Resolve Node.js version using semver.io
 node_version=$(curl --silent --get --data-urlencode "range=${semver_range}" https://semver.io/node/resolve)
 
 # Recommend using semver ranges in a safe manner
-if [ "$semver_range" == "null" ]; then
+if [ "$semver_range" == "null" ] || [ "$npm_semver_range" == "null" ]; then
   protip "Specify a node version in package.json"
   semver_range=""
-elif [ "$semver_range" == "*" ]; then
+elif [ "$semver_range" == "*" ] || [ "$npm_semver_range" == "*" ]; then
   protip "Avoid using semver ranges like '*' in engines.node"
-elif [ ${semver_range:0:1} == ">" ]; then
+elif [ ${semver_range:0:1} == ">" ] ||  [ ${npm_semver_range:0:1} == ">" ]; then
   protip "Avoid using semver ranges starting with '>' in engines.node"
 fi
 
@@ -67,6 +67,8 @@ elif test -d $cache_dir/node_modules; then
 fi
 
 if [ ! -z "$npm_semver_range" ] && [ "$npm_semver_range" != "null" ]; then
+  # Resolve npm version using semver.io
+  npm_version=$(curl --silent --get --data-urlencode "range=${npm_semver_range}" https://semver.io/node/resolve)
   npm --global install npm@"$npm_semver_range"
 fi
 
