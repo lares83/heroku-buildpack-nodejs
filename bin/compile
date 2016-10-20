@@ -68,7 +68,7 @@ fi
 
 if [ ! -z "$npm_semver_range" ] && [ "$npm_semver_range" != "null" ]; then
   # Resolve npm version using semver.io
-  npm_version=$(curl --silent --get --data-urlencode "range=${npm_semver_range}" https://semver.io/node/resolve)
+  npm_version=$(curl --silent --get --data-urlencode "range=${npm_semver_range}" https://semver.io/npm/resolve)
   status "Requested npm range:  $npm_semver_range"
   status "Resolved npm version: $npm_version"
   npm --global install npm@"$npm_version"
