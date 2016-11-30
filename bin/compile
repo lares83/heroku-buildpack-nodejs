@@ -80,7 +80,7 @@ if [ ! -z "$yarn_version" ] && [ "$yarn_version" != "null" ]; then
   status "Requested yarn version:  $yarn_version"
   yarn_url="https://yarnpkg.com/downloads/$yarn_version/yarn-v$yarn_version.tar.gz"
   mkdir -p $build_dir/vendor/yarn
-  curl $yarn_url -s -o - | tar xzf - -C $build_dir/vendor/yarn
+  curl $yarn_url -s -L -o - | tar xzf - -C $build_dir/vendor/yarn
   export PATH=$build_dir/vendor/yarn/dist/bin:$PATH
 fi
 
