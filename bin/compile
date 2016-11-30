@@ -19,7 +19,7 @@ trap cat_npm_debug_log ERR
 # Look in package.json's engines.node field for a semver range
 semver_range=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.node)
 npm_semver_range=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.npm)
-yarn_semver_range=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.yarn)
+yarn_version=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.yarn)
 
 # Resolve Node.js version using semver.io
 node_version=$(curl --silent --get --data-urlencode "range=${semver_range}" https://semver.io/node/resolve)
@@ -75,21 +75,24 @@ if [ ! -z "$npm_semver_range" ] && [ "$npm_semver_range" != "null" ]; then
   npm --global install npm@"$npm_version"
 fi
 
-if [ ! -z "$yarn_semver_range" ] && [ "$yarn_semver_range" != "null" ]; then
-  # semver.io doesn't support yarn but we can just install using a version range from npm
-  status "Requested yarn range:  $yarn_semver_range"
-  npm --global install yarn@"$yarn_semver_range"
+if [ ! -z "$yarn_version" ] && [ "$yarn_version" != "null" ]; then
+  # semver.io doesn't support yarn but we just always specify a concrete version
+  status "Requested yarn version:  $yarn_version"
+  yarn_url="https://yarnpkg.com/downloads/$yarn_version/yarn-v$yarn_version.tar.gz"
+  mkdir -p $build_dir/vendor/yarn
+  curl $yarn_url -s -o - | tar xzf - -C $build_dir/vendor/yarn
+  export PATH=$build_dir/vendor/yarn/dist/bin:$PATH
 fi
 
 # Make npm output to STDOUT instead of its default STDERR
 status "Installing dependencies"
-if [ ! -z "$yarn_semver_range" ] && [ "$yarn_semver_range" != "null" ]; then
+if [ ! -z "$yarn_version" ] && [ "$yarn_version" != "null" ]; then
   yarn install --production 2>&1 | indent
 else
   npm install --production --no-optional 2>&1 | indent
 fi
 
-if [ -z "$yarn_semver_range" ] || [ "$yarn_semver_range" == "null" ]; then
+if [ -z "$yarn_version" ] || [ "$yarn_version" == "null" ]; then
   # yarn prunes packages by default when installing so this is not needed.
   status "Pruning dependencies not specified in package.json"
   npm prune 2>&1 | indent
