@@ -100,7 +100,7 @@ fi
 # Make npm output to STDOUT instead of its default STDERR
 status "Installing dependencies"
 if [ $use_yarn -eq 0 ]; then
-  yarn install --production 2>&1 | indent
+  yarn install --production --pure-lockfile 2>&1 | indent
 else
   npm install --production --no-optional 2>&1 | indent
 fi
