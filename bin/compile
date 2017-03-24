@@ -65,16 +65,11 @@ if test -d $build_dir/node_modules; then
   status "Found existing node_modules directory; skipping cache"
   status "Rebuilding any native dependencies"
   npm rebuild 2>&1 | indent
-elif [ $use_yarn -eq 0 ]; then
+elif [ ! $use_yarn -eq 0 ] && [ -d "$cache_dir/node_modules" ]; then
   # When using Yarn we only restore its cache but not node_modules; Yarn uses its local
   # cache and doesn't connect to the internet in such a case anyway and it's quite fast
   # but at the same time it's more stable to have fresh node_modules copy in every build.
   # We're not copying the cache as it can be large but instead use it directly.
-  status "Setting Yarn cache location"
-  rm -rf "$cache_dir/node_modules"
-  mkdir -p "$cache_dir/yarn-cache"
-  yarn config set cache-folder "$cache_dir/yarn-cache"
-elif test -d "$cache_dir/node_modules"; then
   status "Restoring node_modules directory from cache"
   cp -r $cache_dir/node_modules $build_dir/
 fi
@@ -88,6 +83,11 @@ if [ $use_yarn -eq 0 ]; then
   mkdir -p $build_dir/vendor/yarn
   curl $yarn_url -s -L -o - | tar xzf - -C $build_dir/vendor/yarn
   export PATH=$build_dir/vendor/yarn/dist/bin:$PATH
+
+  status "Setting Yarn cache location"
+  rm -rf "$cache_dir/node_modules"
+  mkdir -p "$cache_dir/yarn-cache"
+  yarn config set cache-folder "$cache_dir/yarn-cache"
 elif [ ! -z "$npm_semver_range" ] && [ "$npm_semver_range" != "null" ]; then
   # Resolve npm version using semver.io
   npm_version=$(curl --silent --get --data-urlencode "range=${npm_semver_range}" https://semver.io/npm/resolve)
