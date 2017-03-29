@@ -21,8 +21,10 @@ semver_range=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.node)
 npm_semver_range=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.npm)
 yarn_semver_range=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.yarn)
 
+set +e
 test ! -z "$yarn_semver_range" -a "$yarn_semver_range" != "null"
 use_yarn=$?
+set -e
 
 # Resolve Node.js version using semver.io
 node_version=$(curl --silent --get --data-urlencode "range=${semver_range}" https://semver.io/node/resolve)
