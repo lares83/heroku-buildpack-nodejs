@@ -86,7 +86,7 @@ if [ $use_yarn -eq 0 ]; then
   yarn_url="https://yarnpkg.com/downloads/$yarn_version/yarn-v$yarn_version.tar.gz"
   mkdir -p $build_dir/vendor/yarn
   curl $yarn_url -s -L -o - | tar xzf - -C $build_dir/vendor/yarn
-  export PATH=$build_dir/vendor/yarn/dist/bin:$PATH
+  export PATH=$build_dir/vendor/yarn/yarn-v$yarn_version/bin:$PATH
 
   status "Setting Yarn cache location"
   rm -rf "$cache_dir/node_modules"
