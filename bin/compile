@@ -54,13 +54,49 @@ resolve() {
   return 1
 }
 
+fail_bin_install() {
+  local error
+  local bin="$1"
+  local version="$2"
+
+  # Allow the subcommand to fail without trapping the error so we can
+  # get the failing message output
+  set +e
+
+  # re-request the result, saving off the reason for the failure this time
+  error=$($RESOLVE "$bin" "$version")
+
+  # re-enable trapping
+  set -e
+
+  if [[ $error = "No result" ]]; then
+    case $bin in
+      node)
+        echo "Could not find Node version corresponding to version requirement: $version";;
+      yarn)
+        echo "Could not find Yarn version corresponding to version requirement: $version";;
+    esac
+  elif [[ $error == "Could not parse"* ]] || [[ $error == "Could not get"* ]]; then
+    echo "Error: Invalid semantic version \"$version\""
+  else
+    echo "Error: Unknown error installing \"$version\" of $bin"
+  fi
+
+  return 1
+}
+
 set +e
 test ! -z "$yarn_semver_range" -a "$yarn_semver_range" != "null"
 use_yarn=$?
 set -e
 
-# Resolve Node.js version using semver.io
-node_version=$(curl --silent --get --data-urlencode "range=${semver_range}" https://semver.io/node/resolve)
+echo "Resolving node version $semver_range..."
+node_resolve_result=$(resolve node "$semver_range" || echo "failed")
+read -r node_version node_url < <(echo "$node_resolve_result")
+
+if [[ "$node_resolve_result" == "failed" ]]; then
+  fail_bin_install node "$semver_range"
+fi
 
 # Recommend using semver ranges in a safe manner
 if [ "$semver_range" == "null" ]; then
@@ -81,8 +117,7 @@ else
 fi
 
 # Download node from Heroku's S3 mirror of nodejs.org/dist
-status "Downloading and installing node"
-node_url="https://s3pository.heroku.com/node/v$node_version/node-v$node_version-linux-x64.tar.gz"
+status "Downloading and installing node ($node_version)..."
 curl $node_url -s -o - | tar xzf - -C $build_dir
 
 # Move node (and npm) into ./vendor and make them executable
@@ -102,7 +137,7 @@ if [ ! $use_yarn -eq 0 ]; then
     # If node_modules directory is checked into source control then
     # rebuild any native deps. Otherwise, restore from the build cache.
     if test -d $build_dir/node_modules; then
-      status "Found existing node_modules directory; skipping cache"
+      status "Founad existing node_modules directory; skipping cache"
       status "Rebuilding any native dependencies"
       npm rebuild 2>&1 | indent
     elif [ -d "$cache_dir/node_modules" ]; then
@@ -112,18 +147,15 @@ if [ ! $use_yarn -eq 0 ]; then
 fi
 
 if [ $use_yarn -eq 0 ]; then
-  # Resolve Yarn version using semver.io
-  # yarn_version=$(curl --silent --get --data-urlencode "range=${yarn_semver_range}" https://semver.io/yarn/resolve)
-  # status "Requested Yarn range:  $yarn_semver_range"
-  # status "Resolved Yarn version: $yarn_version"
-
   echo "Resolving yarn version $yarn_semver_range..."
   resolve_result=$(resolve yarn "$yarn_semver_range" || echo "failed")
 
-  read -r yarn_version yarn_url < <(echo "$resolve_result")
+  if [[ "$resolve_result" == "failed" ]]; then
+    fail_bin_install yarn "$yarn_semver_range"
+  fi
 
-  echo "Downloading and installing yarn ($yarn_version) ($url) ($resolve_result)..."
-  # yarn_url="https://yarnpkg.com/downloads/$yarn_version/yarn-v$yarn_version.tar.gz"
+  read -r yarn_version yarn_url < <(echo "$resolve_result")
+  echo "Downloading and installing yarn ($yarn_version)..."
   
   mkdir -p $build_dir/vendor/yarn
   curl $yarn_url -s -L -o - | tar xzf - -C $build_dir/vendor/yarn
@@ -134,8 +166,7 @@ if [ $use_yarn -eq 0 ]; then
   mkdir -p "$cache_dir/yarn-cache"
   yarn config set cache-folder "$cache_dir/yarn-cache"
 elif [ ! -z "$npm_semver_range" ] && [ "$npm_semver_range" != "null" ]; then
-  # Resolve npm version using semver.io
-  npm_version=$(curl --silent --get --data-urlencode "range=${npm_semver_range}" https://semver.io/npm/resolve)
+  npm_version="$(npm --version)"
   status "Requested npm range:  $npm_semver_range"
   status "Resolved npm version: $npm_version"
   npm --global install npm@"$npm_version"
